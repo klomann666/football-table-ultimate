@@ -3,45 +3,65 @@ load("schema.star", "schema")
 load("http.star", "http")
 load("encoding/json.star", "json")
 
-API = "https://api.openligadb.de"
 
+#
+# Football Table Ultimate
+# Tronbyt / Pixlet
+#
+# Bundesliga 1 + 2
+# Saison 2026/2027
+#
+
+
+API = "https://api.openligadb.de"
 SEASON = "2026"
 
 DEFAULT_LEAGUE = "bl1"
 DEFAULT_FAVORITE = "FC Schalke 04"
 
 
+# ------------------------------------------------------------
+# Kurznamen
+# ------------------------------------------------------------
+
 SHORT_NAMES = {
-    "FC Bayern MÃ¼nchen": "FCB",
+    "FC Bayern München": "FCB",
     "Borussia Dortmund": "BVB",
-    "Bayer 04 Leverkusen": "B04",
     "RB Leipzig": "RBL",
     "VfB Stuttgart": "VFB",
+    "TSG Hoffenheim": "TSG",
+    "Bayer 04 Leverkusen": "B04",
+    "Sport-Club Freiburg": "SCF",
     "Eintracht Frankfurt": "SGE",
-    "SC Freiburg": "SCF",
-    "1. FSV Mainz 05": "M05",
     "FC Augsburg": "FCA",
+    "1. FSV Mainz 05": "M05",
     "1. FC Union Berlin": "FCU",
-    "Borussia MÃ¶nchengladbach": "BMG",
-    "TSG 1899 Hoffenheim": "TSG",
+    "Borussia Mönchengladbach": "BMG",
     "Hamburger SV": "HSV",
-    "FC Schalke 04": "S04",
+    "1. FC Köln": "KOE",
     "SV Werder Bremen": "SVW",
-    "1. FC KÃ¶ln": "KOE",
+    "FC Schalke 04": "S04",
+    "SV Elversberg": "ELV",
+    "SC Paderborn 07": "SCP",
 
+    "DSC Arminia Bielefeld": "DSC",
     "VfL Bochum 1848": "BOC",
-    "Hertha BSC": "HER",
+    "Eintracht Braunschweig": "EBS",
+    "FC Energie Cottbus": "FCE",
+    "SV Darmstadt 98": "SVD",
+    "SG Dynamo Dresden": "SGD",
+    "SpVgg Greuther Fürth": "SGF",
     "Hannover 96": "H96",
+    "1. FC Heidenheim 1846": "FCH",
+    "Hertha BSC": "HER",
     "1. FC Kaiserslautern": "FCK",
     "Karlsruher SC": "KSC",
-    "1. FC NÃ¼rnberg": "FCN",
-    "SC Paderborn 07": "SCP",
-    "SV Darmstadt 98": "SVD",
-    "SpVgg Greuther FÃ¼rth": "SGF",
-    "Eintracht Braunschweig": "EBS",
-    "1. FC Magdeburg": "FCM",
     "Holstein Kiel": "KSV",
-    "SV Elversberg": "ELV",
+    "1. FC Magdeburg": "FCM",
+    "1. FC Nürnberg": "FCN",
+    "VfL Osnabrück": "OSN",
+    "FC St. Pauli": "STP",
+    "VfL Wolfsburg": "WOB",
 }
 
 
@@ -55,101 +75,22 @@ def short_name(name):
     return name
 
 
-def api_get(url, ttl):
-    response = http.get(
-        url,
-        ttl_seconds=ttl,
-    )
-
-    if response.status_code != 200:
-        return []
-
-    return json.decode(response.body)
-
-
-def get_league(config):
-    league = config.get(
-        "league",
-        DEFAULT_LEAGUE,
-    )
-
-    if league == "bl2":
-        return "bl2"
-
-    return "bl1"
-
-
-def get_teams(league):
-    return api_get(
-        API
-        + "/getavailableteams/"
-        + league
-        + "/"
-        + SEASON,
-        86400,
-    )
-
-
-def team_name(team):
-    if "TeamName" in team:
-        return team["TeamName"]
-
-    return ""
-
-
-def favorite_options(league):
-    options = []
-
-    teams = get_teams(league)
-
-    for team in teams:
-        name = team_name(team)
-
-        if name == "":
-            continue
-
-        options.append(
-            schema.Option(
-                display=short_name(name),
-                value=name,
-            )
-        )
-
-    default = DEFAULT_FAVORITE
-
-    if league == "bl2":
-        default = "VfL Bochum 1848"
-
-    if len(options) > 0:
-        found = False
-
-        for option in options:
-            if option.value == default:
-                found = True
-
-        if not found:
-            default = options[0].value
-
-    return [
-        schema.Dropdown(
-            id="favorite",
-            name="Favorit",
-            desc="Lieblingsverein",
-            icon="star",
-            default=default,
-            options=options,
-        ),
-    ]
-
+# ------------------------------------------------------------
+# Konfiguration
+#
+# WICHTIG:
+# Keine schema.Generated-Funktion mehr.
+# Dadurch kann Tronbyt das Schema ohne API-Aufruf laden.
+# ------------------------------------------------------------
 
 def get_schema():
     return schema.Schema(
-        version="1",
+        version="2",
         fields=[
             schema.Dropdown(
                 id="league",
                 name="Liga",
-                desc="Bundesliga auswaehlen",
+                desc="1. oder 2. Bundesliga",
                 icon="futbol",
                 default="bl1",
                 options=[
@@ -164,14 +105,208 @@ def get_schema():
                 ],
             ),
 
-            schema.Generated(
+            schema.Dropdown(
                 id="favorite",
-                source="league",
-                handler=favorite_options,
+                name="Favorit",
+                desc="Lieblingsverein auswählen",
+                icon="star",
+                default=DEFAULT_FAVORITE,
+                options=[
+                    # 1. Bundesliga
+                    schema.Option(
+                        display="FC Schalke 04",
+                        value="FC Schalke 04",
+                    ),
+                    schema.Option(
+                        display="FC Bayern München",
+                        value="FC Bayern München",
+                    ),
+                    schema.Option(
+                        display="Borussia Dortmund",
+                        value="Borussia Dortmund",
+                    ),
+                    schema.Option(
+                        display="RB Leipzig",
+                        value="RB Leipzig",
+                    ),
+                    schema.Option(
+                        display="VfB Stuttgart",
+                        value="VfB Stuttgart",
+                    ),
+                    schema.Option(
+                        display="TSG Hoffenheim",
+                        value="TSG Hoffenheim",
+                    ),
+                    schema.Option(
+                        display="Bayer 04 Leverkusen",
+                        value="Bayer 04 Leverkusen",
+                    ),
+                    schema.Option(
+                        display="Sport-Club Freiburg",
+                        value="Sport-Club Freiburg",
+                    ),
+                    schema.Option(
+                        display="Eintracht Frankfurt",
+                        value="Eintracht Frankfurt",
+                    ),
+                    schema.Option(
+                        display="FC Augsburg",
+                        value="FC Augsburg",
+                    ),
+                    schema.Option(
+                        display="1. FSV Mainz 05",
+                        value="1. FSV Mainz 05",
+                    ),
+                    schema.Option(
+                        display="1. FC Union Berlin",
+                        value="1. FC Union Berlin",
+                    ),
+                    schema.Option(
+                        display="Borussia Mönchengladbach",
+                        value="Borussia Mönchengladbach",
+                    ),
+                    schema.Option(
+                        display="Hamburger SV",
+                        value="Hamburger SV",
+                    ),
+                    schema.Option(
+                        display="1. FC Köln",
+                        value="1. FC Köln",
+                    ),
+                    schema.Option(
+                        display="SV Werder Bremen",
+                        value="SV Werder Bremen",
+                    ),
+                    schema.Option(
+                        display="SV Elversberg",
+                        value="SV Elversberg",
+                    ),
+                    schema.Option(
+                        display="SC Paderborn 07",
+                        value="SC Paderborn 07",
+                    ),
+
+                    # 2. Bundesliga
+                    schema.Option(
+                        display="DSC Arminia Bielefeld",
+                        value="DSC Arminia Bielefeld",
+                    ),
+                    schema.Option(
+                        display="VfL Bochum 1848",
+                        value="VfL Bochum 1848",
+                    ),
+                    schema.Option(
+                        display="Eintracht Braunschweig",
+                        value="Eintracht Braunschweig",
+                    ),
+                    schema.Option(
+                        display="FC Energie Cottbus",
+                        value="FC Energie Cottbus",
+                    ),
+                    schema.Option(
+                        display="SV Darmstadt 98",
+                        value="SV Darmstadt 98",
+                    ),
+                    schema.Option(
+                        display="SG Dynamo Dresden",
+                        value="SG Dynamo Dresden",
+                    ),
+                    schema.Option(
+                        display="SpVgg Greuther Fürth",
+                        value="SpVgg Greuther Fürth",
+                    ),
+                    schema.Option(
+                        display="Hannover 96",
+                        value="Hannover 96",
+                    ),
+                    schema.Option(
+                        display="1. FC Heidenheim 1846",
+                        value="1. FC Heidenheim 1846",
+                    ),
+                    schema.Option(
+                        display="Hertha BSC",
+                        value="Hertha BSC",
+                    ),
+                    schema.Option(
+                        display="1. FC Kaiserslautern",
+                        value="1. FC Kaiserslautern",
+                    ),
+                    schema.Option(
+                        display="Karlsruher SC",
+                        value="Karlsruher SC",
+                    ),
+                    schema.Option(
+                        display="Holstein Kiel",
+                        value="Holstein Kiel",
+                    ),
+                    schema.Option(
+                        display="1. FC Magdeburg",
+                        value="1. FC Magdeburg",
+                    ),
+                    schema.Option(
+                        display="1. FC Nürnberg",
+                        value="1. FC Nürnberg",
+                    ),
+                    schema.Option(
+                        display="VfL Osnabrück",
+                        value="VfL Osnabrück",
+                    ),
+                    schema.Option(
+                        display="FC St. Pauli",
+                        value="FC St. Pauli",
+                    ),
+                    schema.Option(
+                        display="VfL Wolfsburg",
+                        value="VfL Wolfsburg",
+                    ),
+                ],
             ),
         ],
     )
 
+
+# ------------------------------------------------------------
+# API
+# ------------------------------------------------------------
+
+def api_get(url, ttl):
+    response = http.get(
+        url,
+        ttl_seconds=ttl,
+    )
+
+    if response.status_code != 200:
+        return []
+
+    return json.decode(response.body)
+
+
+# ------------------------------------------------------------
+# Liga
+# ------------------------------------------------------------
+
+def get_league(config):
+    league = config.get(
+        "league",
+        DEFAULT_LEAGUE,
+    )
+
+    if league == "bl2":
+        return "bl2"
+
+    return "bl1"
+
+
+def league_title(league):
+    if league == "bl2":
+        return "2. BUNDESLIGA"
+
+    return "1. BUNDESLIGA"
+
+
+# ------------------------------------------------------------
+# Tabelle
+# ------------------------------------------------------------
 
 def get_table(league):
     return api_get(
@@ -181,17 +316,6 @@ def get_table(league):
         + "/"
         + SEASON,
         1800,
-    )
-
-
-def get_matches(league):
-    return api_get(
-        API
-        + "/getmatchdata/"
-        + league
-        + "/"
-        + SEASON,
-        900,
     )
 
 
@@ -216,119 +340,19 @@ def table_logo(team):
     return ""
 
 
-def home_name(game):
-    return game["Team1"]["TeamName"]
+def favorite_position(table, favorite):
+    for index, team in enumerate(table):
+        if table_name(team) == favorite:
+            return (
+                str(index + 1)
+                + ". "
+                + short_name(favorite)
+                + " "
+                + str(table_points(team))
+                + "P"
+            )
 
-
-def away_name(game):
-    return game["Team2"]["TeamName"]
-
-
-def match_finished(game):
-    return game["MatchIsFinished"]
-
-
-def match_datetime(game):
-    return game["MatchDateTime"]
-
-
-def favorite_games(games, favorite):
-    result = []
-
-    for game in games:
-        if (
-            home_name(game) == favorite
-            or away_name(game) == favorite
-        ):
-            result.append(game)
-
-    return result
-
-
-def format_datetime(value):
-    if value == None:
-        return ""
-
-    if len(value) < 16:
-        return ""
-
-    return (
-        value[8:10]
-        + "."
-        + value[5:7]
-        + "."
-        + value[0:4]
-        + " "
-        + value[11:13]
-        + ":"
-        + value[14:16]
-    )
-
-
-def find_next_game(games, favorite):
-    matches = favorite_games(
-        games,
-        favorite,
-    )
-
-    for game in matches:
-        if not match_finished(game):
-            return game
-
-    return None
-
-
-def result_for(game):
-    results = game["MatchResults"]
-
-    if len(results) == 0:
-        return None
-
-    for result in results:
-        if result["ResultTypeID"] == 2:
-            return result
-
-    return results[0]
-
-
-def results_text(games, favorite):
-    matches = favorite_games(
-        games,
-        favorite,
-    )
-
-    text = "ERGEBNISSE   "
-    count = 0
-
-    for game in reversed(matches):
-        if not match_finished(game):
-            continue
-
-        result = result_for(game)
-
-        if result == None:
-            continue
-
-        text += (
-            short_name(home_name(game))
-            + " "
-            + str(result["PointsTeam1"])
-            + ":"
-            + str(result["PointsTeam2"])
-            + " "
-            + short_name(away_name(game))
-            + "   "
-        )
-
-        count += 1
-
-        if count >= 3:
-            break
-
-    if count == 0:
-        return "NOCH KEINE ERGEBNISSE"
-
-    return text
+    return short_name(favorite)
 
 
 def table_text(table, favorite):
@@ -361,23 +385,167 @@ def table_text(table, favorite):
     return text
 
 
-def favorite_position(table, favorite):
-    for index, team in enumerate(table):
-        if table_name(team) == favorite:
-            return (
-                str(index + 1)
-                + ". "
-                + short_name(favorite)
-                + " "
-                + str(table_points(team))
-                + "P"
-            )
+# ------------------------------------------------------------
+# Spiele
+# ------------------------------------------------------------
 
-    return short_name(favorite)
+def get_matches(league):
+    return api_get(
+        API
+        + "/getmatchdata/"
+        + league
+        + "/"
+        + SEASON,
+        900,
+    )
 
+
+def home_name(game):
+    return game["Team1"]["TeamName"]
+
+
+def away_name(game):
+    return game["Team2"]["TeamName"]
+
+
+def match_finished(game):
+    return game["MatchIsFinished"]
+
+
+def match_datetime(game):
+    return game["MatchDateTime"]
+
+
+def favorite_games(games, favorite):
+    matches = []
+
+    for game in games:
+        if (
+            home_name(game) == favorite
+            or away_name(game) == favorite
+        ):
+            matches.append(game)
+
+    return matches
+
+
+# ------------------------------------------------------------
+# Datum / Uhrzeit
+# ------------------------------------------------------------
+
+def format_datetime(value):
+    if value == None:
+        return ""
+
+    if len(value) < 16:
+        return ""
+
+    return (
+        value[8:10]
+        + "."
+        + value[5:7]
+        + "."
+        + value[0:4]
+        + " "
+        + value[11:13]
+        + ":"
+        + value[14:16]
+    )
+
+
+# ------------------------------------------------------------
+# Nächstes Spiel
+# ------------------------------------------------------------
+
+def find_next_game(games, favorite):
+    matches = favorite_games(
+        games,
+        favorite,
+    )
+
+    next_game = None
+
+    for game in matches:
+
+        if match_finished(game):
+            continue
+
+        if next_game == None:
+            next_game = game
+            continue
+
+        if match_datetime(game) < match_datetime(next_game):
+            next_game = game
+
+    return next_game
+
+
+# ------------------------------------------------------------
+# Ergebnisse
+# ------------------------------------------------------------
+
+def result_for(game):
+    results = game["MatchResults"]
+
+    if len(results) == 0:
+        return None
+
+    for result in results:
+        if result["ResultTypeID"] == 2:
+            return result
+
+    return results[0]
+
+
+def results_text(games, favorite):
+    matches = favorite_games(
+        games,
+        favorite,
+    )
+
+    text = "LETZTE SPIELE   "
+    count = 0
+
+    for game in reversed(matches):
+
+        if not match_finished(game):
+            continue
+
+        result = result_for(game)
+
+        if result == None:
+            continue
+
+        text += (
+            short_name(home_name(game))
+            + " "
+            + str(result["PointsTeam1"])
+            + ":"
+            + str(result["PointsTeam2"])
+            + " "
+            + short_name(away_name(game))
+            + "   "
+        )
+
+        count += 1
+
+        if count >= 3:
+            break
+
+    if count == 0:
+        return "NOCH KEINE ERGEBNISSE"
+
+    return text
+
+
+# ------------------------------------------------------------
+# Vereinslogo
+# ------------------------------------------------------------
 
 def favorite_logo(table, favorite):
+
     for team in table:
+
         if table_name(team) != favorite:
             continue
 
@@ -399,7 +567,12 @@ def favorite_logo(table, favorite):
     return None
 
 
+# ------------------------------------------------------------
+# Hauptprogramm
+# ------------------------------------------------------------
+
 def main(config):
+
     league = get_league(config)
 
     favorite = config.get(
@@ -408,6 +581,7 @@ def main(config):
     )
 
     table = get_table(league)
+
     games = get_matches(league)
 
     logo = favorite_logo(
@@ -415,15 +589,15 @@ def main(config):
         favorite,
     )
 
-    if league == "bl1":
-        title = "1. BUNDESLIGA"
-    else:
-        title = "2. BUNDESLIGA"
+    # --------------------------------------------------------
+    # Kopf
+    # --------------------------------------------------------
 
     header = render.Column(
+        main_align="center",
         children=[
             render.Text(
-                content=title,
+                content=league_title(league),
                 color="#00ff00",
             ),
 
@@ -437,10 +611,14 @@ def main(config):
         ],
     )
 
-    favorite_content = []
+    # --------------------------------------------------------
+    # Favorit + Logo
+    # --------------------------------------------------------
+
+    favorite_children = []
 
     if logo != None:
-        favorite_content.append(
+        favorite_children.append(
             render.Image(
                 src=logo,
                 width=12,
@@ -448,7 +626,7 @@ def main(config):
             )
         )
 
-    favorite_content.append(
+    favorite_children.append(
         render.Text(
             content=short_name(favorite),
             color="#ffffff",
@@ -458,8 +636,42 @@ def main(config):
     favorite_screen = render.Row(
         main_align="center",
         cross_align="center",
-        children=favorite_content,
+        children=favorite_children,
     )
+
+    # --------------------------------------------------------
+    # Tabelle
+    # --------------------------------------------------------
+
+    table_screen = render.Marquee(
+        width=64,
+        child=render.Text(
+            content=table_text(
+                table,
+                favorite,
+            ),
+            color="#ffffff",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Ergebnisse
+    # --------------------------------------------------------
+
+    results_screen = render.Marquee(
+        width=64,
+        child=render.Text(
+            content=results_text(
+                games,
+                favorite,
+            ),
+            color="#ffff00",
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Nächstes Spiel
+    # --------------------------------------------------------
 
     next_game = find_next_game(
         games,
@@ -467,17 +679,24 @@ def main(config):
     )
 
     if next_game == None:
-        next_screen = render.Text(
-            content="KEIN NAECHSTES SPIEL",
-            color="#ff0000",
-        )
-    else:
+
         next_screen = render.Column(
             main_align="center",
-            cross_align="center",
             children=[
                 render.Text(
-                    content="NAECHSTES SPIEL",
+                    content="KEIN SPIEL",
+                    color="#ff0000",
+                ),
+            ],
+        )
+
+    else:
+
+        next_screen = render.Column(
+            main_align="center",
+            children=[
+                render.Text(
+                    content="NÄCHSTES SPIEL",
                     color="#00ffff",
                 ),
 
@@ -485,7 +704,7 @@ def main(config):
                     content=short_name(
                         home_name(next_game)
                     )
-                    + "-"
+                    + " - "
                     + short_name(
                         away_name(next_game)
                     ),
@@ -501,6 +720,10 @@ def main(config):
             ],
         )
 
+    # --------------------------------------------------------
+    # Animation
+    # --------------------------------------------------------
+
     return render.Animation(
         children=[
             render.Root(
@@ -515,30 +738,12 @@ def main(config):
 
             render.Root(
                 delay=120,
-                child=render.Marquee(
-                    width=64,
-                    child=render.Text(
-                        content=table_text(
-                            table,
-                            favorite,
-                        ),
-                        color="#ffffff",
-                    ),
-                ),
+                child=table_screen,
             ),
 
             render.Root(
                 delay=120,
-                child=render.Marquee(
-                    width=64,
-                    child=render.Text(
-                        content=results_text(
-                            games,
-                            favorite,
-                        ),
-                        color="#ffff00",
-                    ),
-                ),
+                child=results_screen,
             ),
 
             render.Root(
